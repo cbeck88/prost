@@ -178,7 +178,7 @@ fn try_message(input: TokenStream) -> Result<TokenStream, Error> {
         #[allow(non_snake_case, unused_attributes)]
         const #dummy_const: () = {
             extern crate prost as _prost;
-            extern crate bytes as _bytes;
+            use _prost::_bytes;
 
             impl _prost::Message for #ident {
                 #[allow(unused_variables)]
