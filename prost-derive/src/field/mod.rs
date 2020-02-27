@@ -364,13 +364,3 @@ fn tags_attr(attr: &Meta) -> Result<Option<Vec<u32>>, Error> {
         _ => bail!("invalid tag attribute: {:?}", attr),
     }
 }
-
-// Helper which builds an identifier corresponding `std` or `alloc` depending
-// on feature selection
-fn collections_lib_name(alloc: bool) -> Ident {
-    if alloc {
-        Ident::new("alloc", Span::call_site())
-    } else {
-        Ident::new("std", Span::call_site())
-    }
-}

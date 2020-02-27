@@ -9,7 +9,7 @@ use syn::{
 };
 
 use crate::field::{
-    bool_attr, collections_lib_name, set_bool, set_option, tag_attr, word_attr, Label,
+    bool_attr, set_bool, set_option, tag_attr, word_attr, Label,
 };
 
 /// A scalar protobuf field.
@@ -218,11 +218,10 @@ impl Field {
 
     /// Returns an expression which evaluates to the default value of the field.
     pub fn default(&self) -> TokenStream {
-        let libname = collections_lib_name(self.alloc);
         match self.kind {
             Kind::Plain(ref value) | Kind::Required(ref value) => value.owned(self.alloc),
             Kind::Optional(_) => quote!(::core::option::Option::None),
-            Kind::Repeated | Kind::Packed => quote!(::#libname::vec::Vec::new()),
+            Kind::Repeated | Kind::Packed => quote!(::alloc::vec::Vec::new()),
         }
     }
 
@@ -250,7 +249,6 @@ impl Field {
     /// Returns a fragment for formatting the field `ident` in `Debug`.
     pub fn debug(&self, wrapper_name: TokenStream) -> TokenStream {
         let wrapper = self.debug_inner(quote!(Inner));
-        let libname = collections_lib_name(self.alloc);
         let inner_ty = self.ty.rust_type(self.alloc);
         match self.kind {
             Kind::Plain(_) | Kind::Required(_) => self.debug_inner(wrapper_name),
@@ -265,7 +263,7 @@ impl Field {
             },
             Kind::Repeated | Kind::Packed => {
                 quote! {
-                    struct #wrapper_name<'a>(&'a ::#libname::vec::Vec<#inner_ty>);
+                    struct #wrapper_name<'a>(&'a ::alloc::vec::Vec<#inner_ty>);
                     impl<'a> ::core::fmt::Debug for #wrapper_name<'a> {
                         fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
                             let mut vec_builder = f.debug_list();
@@ -339,7 +337,7 @@ impl Field {
                         #[doc=#iter_doc]
                         pub fn #ident(&self) -> ::core::iter::FilterMap<
                             ::core::iter::Cloned<::core::slice::Iter<i32>>,
-                            fn(i32) -> ::std::option::Option<#ty>,
+                            fn(i32) -> ::core::option::Option<#ty>,
                         > {
                             self.#ident.iter().cloned().filter_map(#ty::from_i32)
                         }
@@ -505,10 +503,9 @@ impl Ty {
 
     // TODO: rename to 'owned_type'.
     pub fn rust_type(&self, alloc: bool) -> TokenStream {
-        let libname = collections_lib_name(alloc);
         match *self {
-            Ty::String => quote!(::#libname::string::String),
-            Ty::Bytes => quote!(::#libname::vec::Vec<u8>),
+            Ty::String => quote!(::alloc::string::String),
+            Ty::Bytes => quote!(::alloc::vec::Vec<u8>),
             _ => self.rust_ref_type(),
         }
     }
@@ -758,14 +755,13 @@ impl DefaultValue {
     }
 
     pub fn owned(&self, alloc: bool) -> TokenStream {
-        let libname = collections_lib_name(alloc);
         match *self {
             DefaultValue::String(ref value) if value.is_empty() => {
-                quote!(::#libname::string::String::new())
+                quote!(::alloc::string::String::new())
             }
             DefaultValue::String(ref value) => quote!(#value.to_owned()),
             DefaultValue::Bytes(ref value) if value.is_empty() => {
-                quote!(::#libname::vec::Vec::new())
+                quote!(::alloc::vec::Vec::new())
             }
             DefaultValue::Bytes(ref value) => {
                 let lit = LitByteStr::new(value, Span::call_site());
